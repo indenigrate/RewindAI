@@ -5,7 +5,7 @@ from langgraph.graph import StateGraph, MessagesState, START, END
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.sqlite import SqliteSaver
-
+import uuid
 load_dotenv()
 
 # ---- SQLite (ONE connection per process) ----
@@ -38,8 +38,32 @@ def build_graph():
 # ---- REPL ----
 def repl():
     graph = build_graph()
-    thread_id = "default"
-    config = get_checkpoint_config(thread_id)
+
+    source_thread = input(
+        "Source thread_id (press Enter for default): "
+    ).strip() or "default"
+
+    checkpoint_id = input(
+        "Checkpoint ID (press Enter for latest): "
+    ).strip()
+
+    if checkpoint_id:
+        print(
+            f"\n🌱 Forking from thread '{source_thread}' "
+            f"at checkpoint '{checkpoint_id}'"
+        )
+        active_thread = fork_from_checkpoint(
+            graph,
+            source_thread,
+            checkpoint_id
+        )
+        print(f"🧵 New thread created: {active_thread}\n")
+    else:
+        active_thread = source_thread
+        print(f"\n▶️ Continuing thread: {active_thread}\n")
+
+    config = {"configurable": {"thread_id": active_thread}}
+
     print("Type 'exit' or 'quit' to stop.")
     while True:
         u = input("You: ").strip()
@@ -50,11 +74,16 @@ def repl():
             {"messages": [HumanMessage(content=u)]},
             config=config
         )
+
         print("Bot:", result["messages"][-1].content)
-        
+
         state = graph.get_state(config)
-        checkpoint_id = state.config["configurable"]["checkpoint_id"]
-        print(f"🧩 Current checkpoint_id: {checkpoint_id}")
+        print(
+            "🧩 checkpoint_id:",
+            state.config["configurable"]["checkpoint_id"],
+            "\n"
+        )
+
             
 
 def get_checkpoint_config(thread_id: str):
@@ -72,7 +101,35 @@ def get_checkpoint_config(thread_id: str):
 
     return {"configurable": cfg}
 
+def new_thread_id():
+    return f"branch-{uuid.uuid4().hex[:8]}"
 
+def fork_from_checkpoint(graph, source_thread_id, checkpoint_id):
+    """
+    Load state from (source_thread_id, checkpoint_id),
+    create a new thread with that state,
+    return new thread_id
+    """
+    # Load checkpoint state
+    source_config = {
+        "configurable": {
+            "thread_id": source_thread_id,
+            "checkpoint_id": checkpoint_id,
+        }
+    }
+
+    state = graph.get_state(source_config)
+
+    # Generate new thread
+    branched_thread_id = new_thread_id()
+
+    # Seed new thread with copied state
+    graph.invoke(
+        state.values,
+        {"configurable": {"thread_id": branched_thread_id}}
+    )
+
+    return branched_thread_id
 
 if __name__ == "__main__":
     repl()
