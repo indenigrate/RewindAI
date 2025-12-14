@@ -1,0 +1,15 @@
+# Core language + workflow
+langgraph>=0.2.30
+langchain>=0.2.14
+langchain-core>=0.2.14
+langgraph-checkpoint-postgres
+
+# Google Gemini
+langchain-google-genai>=1.0.6
+google-generativeai>=0.7.2
+
+# Database
+psycopg[binary]>=3.1.18
+
+# Environment variables
+python-dotenv>=1.0.1
