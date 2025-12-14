@@ -26,7 +26,7 @@ POSTGRES_CONN_STRING = (
 # ---------------------------
 app_db = psycopg.connect(
     POSTGRES_CONN_STRING,
-    row_factory=dict_row
+    row_factory=dict_row  # type: ignore[arg-type]
 )
 
 # ---------------------------
@@ -74,7 +74,10 @@ def get_next_turn_index(conn, thread_id: str) -> int:
             """,
             (thread_id,)
         )
-        return cur.fetchone()["next_turn"]
+        row = cur.fetchone()
+        assert row is not None
+        return row["next_turn"]
+
 
 def store_ai_message_checkpoint(
     conn,
@@ -160,7 +163,12 @@ def repl():
                     """,
                     (source_thread, checkpoint_id)
                 )
-                parent_ai_message_id = cur.fetchone()["ai_message_id"]
+                row = cur.fetchone()
+                if row is None:
+                    raise RuntimeError("Checkpoint not found")
+
+                parent_ai_message_id = row["ai_message_id"]
+
 
             parent_thread_id = source_thread
         else:
