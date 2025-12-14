@@ -183,7 +183,9 @@ def repl():
             print("Bot:", result["messages"][-1].content)
 
             state = graph.get_state(config)
-            checkpoint_id = state.config["configurable"]["checkpoint_id"]
+            cfg = state.config.get("configurable")
+            assert cfg is not None
+            checkpoint_id = cfg["checkpoint_id"]
 
             last_ai = state.values["messages"][-1]
 
