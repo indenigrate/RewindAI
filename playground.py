@@ -7,6 +7,7 @@ from langgraph.graph import StateGraph, MessagesState, START, END
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.postgres import PostgresSaver
+from langchain_core.runnables import RunnableConfig
 
 # Load env vars
 load_dotenv()
@@ -176,7 +177,12 @@ def repl():
 
         print(f"Active thread: {active_thread}\n")
 
-        config = {"configurable": {"thread_id": active_thread}}
+        
+        config: RunnableConfig = {
+            "configurable": {
+                "thread_id": active_thread
+            }
+        }
 
         while True:
             u = input("You: ").strip()
