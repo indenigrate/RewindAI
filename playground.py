@@ -38,8 +38,8 @@ def build_graph():
 # ---- REPL ----
 def repl():
     graph = build_graph()
-    config = {"configurable": {"thread_id": "1"}}
-
+    thread_id = "default"
+    config = get_checkpoint_config(thread_id)
     print("Type 'exit' or 'quit' to stop.")
     while True:
         u = input("You: ").strip()
@@ -52,16 +52,26 @@ def repl():
         )
         print("Bot:", result["messages"][-1].content)
         
-    print(graph.get_state(config=config))
-    
+        state = graph.get_state(config)
+        checkpoint_id = state.config["configurable"]["checkpoint_id"]
+        print(f"🧩 Current checkpoint_id: {checkpoint_id}")
+            
 
-def get_thread_config():
-    thread_id = input("Thread ID (press Enter for default): ").strip()
-    if not thread_id:
-        thread_id = "default"
+def get_checkpoint_config(thread_id: str):
+    checkpoint_id = input(
+        "Checkpoint ID (press Enter for latest): "
+    ).strip()
 
-    print(f"\n🧵 Using thread_id: {thread_id}\n")
-    return {"configurable": {"thread_id": thread_id}}
+    cfg = {"thread_id": thread_id}
+
+    if checkpoint_id:
+        cfg["checkpoint_id"] = checkpoint_id
+        print(f"\nResuming from checkpoint_id: {checkpoint_id}\n")
+    else:
+        print("\nResuming from latest checkpoint\n")
+
+    return {"configurable": cfg}
+
 
 
 if __name__ == "__main__":
