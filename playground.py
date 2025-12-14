@@ -49,7 +49,7 @@ def repl():
 
     if checkpoint_id:
         print(
-            f"\n🌱 Forking from thread '{source_thread}' "
+            f"\nForking from thread '{source_thread}' "
             f"at checkpoint '{checkpoint_id}'"
         )
         active_thread = fork_from_checkpoint(
@@ -57,10 +57,10 @@ def repl():
             source_thread,
             checkpoint_id
         )
-        print(f"🧵 New thread created: {active_thread}\n")
+        print(f"New thread created: {active_thread}\n")
     else:
         active_thread = source_thread
-        print(f"\n▶️ Continuing thread: {active_thread}\n")
+        print(f"\nContinuing thread: {active_thread}\n")
 
     config = {"configurable": {"thread_id": active_thread}}
 
@@ -79,10 +79,12 @@ def repl():
 
         state = graph.get_state(config)
         print(
-            "🧩 checkpoint_id:",
+            "checkpoint_id:",
             state.config["configurable"]["checkpoint_id"],
             "\n"
         )
+    print(graph.get_state(config))
+    
 
             
 
