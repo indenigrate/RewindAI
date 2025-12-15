@@ -31,13 +31,19 @@ class ConversationWorker:
         
         print(f"  -> Found {len(pending)} unanswered messages in thread {thread_id}.")
 
-        resume_checkpoint_id = None
-        # Check if this is a forked thread that needs a checkpoint to resume from
-        fork_event = next((e for e in events if e.event_type == "ThreadForked"), None)
-        if fork_event:
-            # Only use the checkpoint if we are about to process the *first* user message
-            is_first_message = not any(e.event_type == "LLMResponseGenerated" for e in events)
-            if is_first_message:
+        initial_resume_checkpoint_id = None
+
+        # 1. Try to find the latest checkpoint in the current thread's history
+        for event in reversed(events):
+            if event.event_type == "CheckpointCreated":
+                initial_resume_checkpoint_id = event.payload["checkpoint_id"]
+                print(f"  -> Found latest checkpoint in current thread: {initial_resume_checkpoint_id}")
+                break
+        
+        # 2. If no local checkpoint, and it's a forked thread, use the parent's checkpoint at the fork point
+        if initial_resume_checkpoint_id is None:
+            fork_event = next((e for e in events if e.event_type == "ThreadForked"), None)
+            if fork_event:
                 parent_thread_id = fork_event.payload["parent_thread_id"]
                 from_event_number = fork_event.payload["from_event_number"]
                 
@@ -48,25 +54,53 @@ class ConversationWorker:
                 checkpoint_event = next((e for e in parent_events if e.event_number == from_event_number + 1 and e.event_type == "CheckpointCreated"), None)
                 
                 if checkpoint_event:
-                    resume_checkpoint_id = checkpoint_event.payload["checkpoint_id"]
-                    print(f"  -> Found checkpoint to resume from: {resume_checkpoint_id}")
+                    initial_resume_checkpoint_id = checkpoint_event.payload["checkpoint_id"]
+                    print(f"  -> Found parent checkpoint to resume from: {initial_resume_checkpoint_id}")
 
-
+        
+        # Process pending messages, passing the appropriate resume_checkpoint_id
+        current_resume_checkpoint_id = initial_resume_checkpoint_id
         for user_event in pending:
-            # Pass the checkpoint ID, but it will only be used for the first message handled
-            self._handle_user_message(store, thread_id, user_event, resume_checkpoint_id)
-            # After the first message, don't use the checkpoint again
-            resume_checkpoint_id = None
-
+            self._handle_user_message(store, thread_id, user_event, current_resume_checkpoint_id)
+            # After processing, the next message should resume from the newly created checkpoint (if any)
+            # This logic will be handled by run_langgraph_from_events internally
+            # For simplicity here, we assume subsequent calls will fetch the latest
+            # This 'current_resume_checkpoint_id' only really applies to the first message in this batch.
+            # Subsequent messages in the 'pending' list should just build on the graph state.
+            current_resume_checkpoint_id = None # Reset so only the first in batch uses the explicit resume_checkpoint_id
 
     def _handle_user_message(self, store: EventStore, thread_id: str, user_event: Event, resume_checkpoint_id: Optional[str] = None):
         print(f"    -> Processing message {user_event.event_id} in thread {thread_id} to generate AI response...")
         try:
-            # We only need events up to the current user message
+            # Construct the full history for LangGraph, including parent thread messages if forked
+            full_thread_events = []
+
+            # Load all events for the current thread
+            current_thread_events = store.load_thread_events(thread_id)
+
+            # Check if this is a forked thread
+            fork_event = next((e for e in current_thread_events if e.event_type == "ThreadForked"), None)
+
+            if fork_event:
+                parent_thread_id = fork_event.payload["parent_thread_id"]
+                from_event_number = fork_event.payload["from_event_number"]
+
+                # Load parent thread's messages up to the fork point
+                parent_events = store.load_thread_events(parent_thread_id)
+                full_thread_events.extend([
+                    e for e in parent_events
+                    if e.event_number <= from_event_number
+                ])
+            
+            # Add all events from the current thread (forked or not)
+            full_thread_events.extend(current_thread_events)
+
+            # Filter to include only events up to the current user message, and sort by event_number
             prior_events = [
-                e for e in store.load_thread_events(thread_id)
+                e for e in full_thread_events
                 if e.event_number <= user_event.event_number
             ]
+            prior_events.sort(key=lambda e: e.event_number) # Ensure chronological order for LangGraph
 
             result = run_langgraph_from_events(
                 events=prior_events,

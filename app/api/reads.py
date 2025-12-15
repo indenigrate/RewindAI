@@ -81,10 +81,9 @@ def get_messages(
                       checkpoint_id IS NULL
                       OR checkpoint_id <= %s
                   )
-                  AND event_number > %s
                 ORDER BY event_number
                 """
-                params = (thread_id, checkpoint_id, from_event_number)
+                params = (thread_id, checkpoint_id)
             else:
                 sql = """
                 SELECT
@@ -95,10 +94,9 @@ def get_messages(
                     created_at
                 FROM thread_timeline
                 WHERE thread_id = %s
-                  AND event_number > %s
                 ORDER BY event_number
                 """
-                params = (thread_id, from_event_number)
+                params = (thread_id,)
             cur.execute(sql, params)
             all_messages.extend(cur.fetchall())
 
