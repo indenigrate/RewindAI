@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.core.events import StoredEvent
 
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List

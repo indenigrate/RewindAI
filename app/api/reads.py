@@ -12,7 +12,6 @@ def list_threads(db: Connection = Depends(get_db)):
             """
             SELECT
                 thread_id,
-                parent_thread_id,
                 created_at
             FROM thread_heads
             ORDER BY created_at DESC
@@ -50,13 +49,12 @@ def get_messages(
         SELECT
             role,
             content,
-            ai_message_id,
-            checkpoint_id,
-            turn_index,
+            message_id,
+            event_number,
             created_at
         FROM thread_timeline
         WHERE thread_id = %s
-        ORDER BY turn_index
+        ORDER BY event_number
         """
         params = (thread_id,)
 
