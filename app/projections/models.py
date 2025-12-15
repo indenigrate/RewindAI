@@ -23,6 +23,7 @@ THREAD_HEADS_SQL = """
 CREATE TABLE IF NOT EXISTS thread_heads (
     thread_id TEXT PRIMARY KEY,
     latest_checkpoint_id TEXT NOT NULL,
+    latest_ai_message_id TEXT NOT NULL,
     event_number BIGINT NOT NULL
 );
 """

@@ -12,9 +12,11 @@ def list_threads(db: Connection = Depends(get_db)):
             """
             SELECT
                 thread_id,
-                created_at
+                latest_checkpoint_id,
+                latest_ai_message_id,
+                event_number
             FROM thread_heads
-            ORDER BY created_at DESC
+            ORDER BY event_number DESC
             """
         )
         return cur.fetchall()
@@ -91,7 +93,7 @@ def get_thread_head(thread_id: str, db: Connection = Depends(get_db)):
                 thread_id,
                 latest_checkpoint_id,
                 latest_ai_message_id,
-                updated_at
+                event_number
             FROM thread_heads
             WHERE thread_id = %s
             """,

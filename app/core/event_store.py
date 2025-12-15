@@ -2,7 +2,7 @@ from __future__ import annotations
 from app.core.events import StoredEvent
 
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional
 from uuid import UUID
 from datetime import datetime
 import psycopg
@@ -20,6 +20,7 @@ class Event:
     event_number: int
     payload: Dict[str, Any]
     created_at: datetime
+    parent_event_id: Optional[UUID] = None
 
 class EventStore:
     def __init__(self, conn: psycopg.Connection):
@@ -162,13 +163,13 @@ class EventStore:
         If last_event_id is None, load from the beginning.
         """
 
-        with self.conn.cursor() as cur:
+        with self.conn.cursor(row_factory=dict_row) as cur:
             if last_event_id is None:
                 cur.execute(
                     """
                     SELECT *
                     FROM events
-                    ORDER BY created_at ASC
+                    ORDER BY created_at ASC, event_id ASC
                     LIMIT %s
                     """,
                     (limit,),
@@ -178,9 +179,9 @@ class EventStore:
                     """
                     SELECT *
                     FROM events
-                    WHERE created_at >
-                        (SELECT created_at FROM events WHERE event_id = %s)
-                    ORDER BY created_at ASC
+                    WHERE (created_at, event_id) >
+                        (SELECT created_at, event_id FROM events WHERE event_id = %s)
+                    ORDER BY created_at ASC, event_id ASC
                     LIMIT %s
                     """,
                     (last_event_id, limit),

@@ -12,32 +12,28 @@ from app.projections.models import (
 
 
 class ProjectionWorker:
-    def __init__(self, conn: Connection):
-        self.conn = conn
-        self.store = EventStore(conn)
-        self.projector = Projector(conn)
-
+    def __init__(self):
         # Logical name for this projection pipeline
         self.projection_name = "main_projection"
-
-        self._init_tables()
 
     # --------------------------------------------------
     # Schema init
     # --------------------------------------------------
-    def _init_tables(self):
-        with self.conn.cursor() as cur:
-            cur.execute(THREAD_TIMELINE_SQL)
-            cur.execute(MESSAGE_CHECKPOINTS_SQL)
-            cur.execute(THREAD_HEADS_SQL)
-            cur.execute(PROJECTION_OFFSET_SQL)
-        self.conn.commit()
+    @staticmethod
+    def _init_tables():
+        with get_app_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(THREAD_TIMELINE_SQL)
+                cur.execute(MESSAGE_CHECKPOINTS_SQL)
+                cur.execute(THREAD_HEADS_SQL)
+                cur.execute(PROJECTION_OFFSET_SQL)
+            conn.commit()
 
     # --------------------------------------------------
     # Offset handling (UUID-based)
     # --------------------------------------------------
-    def _get_last_event_id(self):
-        with self.conn.cursor() as cur:
+    def _get_last_event_id(self, conn: Connection):
+        with conn.cursor() as cur:
             cur.execute(
                 """
                 SELECT last_event_id
@@ -49,8 +45,8 @@ class ProjectionWorker:
             row = cur.fetchone()
             return row["last_event_id"] if row else None
 
-    def _update_offset(self, event_id):
-        with self.conn.cursor() as cur:
+    def _update_offset(self, conn: Connection, event_id):
+        with conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO projection_offsets (projection_name, last_event_id)
@@ -60,27 +56,35 @@ class ProjectionWorker:
                 """,
                 (self.projection_name, event_id),
             )
-        self.conn.commit()
+        conn.commit()
 
     # --------------------------------------------------
     # Batch processing
     # --------------------------------------------------
-    def _process_batch(self, limit: int = 100) -> bool:
-        last_event_id = self._get_last_event_id()
+    def run_once(self, limit: int = 100) -> bool:
+        with get_app_db() as conn:
+            store = EventStore(conn)
+            projector = Projector(conn)
+            
+            last_event_id = self._get_last_event_id(conn)
+            print(f"Checking for new events after: {last_event_id}")
 
-        events = self.store.load_events_after(
-            last_event_id=last_event_id,
-            limit=limit,
-        )
+            events = store.load_events_after(
+                last_event_id=last_event_id,
+                limit=limit,
+            )
 
-        if not events:
-            return False
+            if not events:
+                print("No new events found.")
+                return False
 
-        for event in events:
-            self.projector.project_event(event)
-            self._update_offset(event.event_id)
+            print(f"Found {len(events)} new events to project.")
+            for event in events:
+                print(f"  -> Projecting event {event.event_id} ({event.event_type})")
+                projector.project_event(event)
+                self._update_offset(conn, event.event_id)
 
-        return True
+            return True
 
     # --------------------------------------------------
     # Main loop
@@ -90,7 +94,7 @@ class ProjectionWorker:
 
         while True:
             try:
-                processed = self._process_batch()
+                processed = self.run_once()
                 if not processed:
                     time.sleep(0.5)
             except Exception as e:
@@ -102,8 +106,8 @@ class ProjectionWorker:
 # Entrypoint
 # --------------------------------------------------
 def main():
-    conn = get_app_db()
-    worker = ProjectionWorker(conn)
+    ProjectionWorker._init_tables()
+    worker = ProjectionWorker()
     worker.run()
 
 

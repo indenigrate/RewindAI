@@ -87,17 +87,20 @@ def handle_checkpoint_created(conn: Connection, event: Event):
             INSERT INTO thread_heads (
                 thread_id,
                 latest_checkpoint_id,
+                latest_ai_message_id,
                 event_number
             )
-            VALUES (%s, %s, %s)
+            VALUES (%s, %s, %s, %s)
             ON CONFLICT (thread_id)
             DO UPDATE SET
                 latest_checkpoint_id = EXCLUDED.latest_checkpoint_id,
+                latest_ai_message_id = EXCLUDED.latest_ai_message_id,
                 event_number = EXCLUDED.event_number
             """,
             (
                 event.thread_id,
                 payload["checkpoint_id"],
+                payload["ai_message_id"],
                 event.event_number,
             ),
         )
