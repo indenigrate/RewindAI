@@ -7,6 +7,7 @@ EVENT_HANDLER_MAP = {
     "UserMessageAdded": handlers.handle_user_message_added,
     "LLMResponseGenerated": handlers.handle_llm_response_generated,
     "CheckpointCreated": handlers.handle_checkpoint_created,
+    "ThreadForked": handlers.handle_thread_forked,
 }
 
 

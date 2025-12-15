@@ -118,3 +118,27 @@ def handle_checkpoint_created(conn: Connection, event: Event):
                 event.event_number,
             ),
         )
+
+
+def handle_thread_forked(conn: Connection, event: Event):
+    payload = event.payload
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO branches_projection (
+                thread_id,
+                parent_thread_id,
+                from_event_number,
+                created_at
+            )
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT DO NOTHING
+            """,
+            (
+                event.thread_id,
+                payload["parent_thread_id"],
+                payload["from_event_number"],
+                event.created_at,
+            ),
+        )

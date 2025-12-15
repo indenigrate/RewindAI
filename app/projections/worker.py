@@ -8,6 +8,7 @@ from app.projections.models import (
     THREAD_TIMELINE_SQL,
     MESSAGE_CHECKPOINTS_SQL,
     THREAD_HEADS_SQL,
+    BRANCHES_PROJECTION_SQL,
 )
 
 
@@ -27,6 +28,7 @@ class ProjectionWorker:
                 cur.execute(MESSAGE_CHECKPOINTS_SQL)
                 cur.execute(THREAD_HEADS_SQL)
                 cur.execute(PROJECTION_OFFSET_SQL)
+                cur.execute(BRANCHES_PROJECTION_SQL)
             conn.commit()
 
     # --------------------------------------------------

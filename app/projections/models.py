@@ -35,3 +35,12 @@ CREATE TABLE IF NOT EXISTS projection_offsets (
     last_event_id UUID NOT NULL
 );
 """
+
+BRANCHES_PROJECTION_SQL = """
+CREATE TABLE IF NOT EXISTS branches_projection (
+    thread_id TEXT PRIMARY KEY,
+    parent_thread_id TEXT NOT NULL,
+    from_event_number BIGINT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+"""

@@ -143,14 +143,13 @@ def get_messages(
 
 @router.get("/{thread_id}/branches")
 def list_branches(thread_id: str, db: Connection = Depends(get_db)):
-    with db.cursor() as cur:
+    with db.cursor(row_factory=dict_row) as cur:
         cur.execute(
             """
             SELECT
                 thread_id,
                 parent_thread_id,
-                parent_checkpoint_id,
-                parent_ai_message_id,
+                from_event_number,
                 created_at
             FROM branches_projection
             WHERE parent_thread_id = %s
