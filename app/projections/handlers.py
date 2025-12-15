@@ -32,6 +32,7 @@ def handle_user_message_added(conn: Connection, event: Event):
 
 def handle_llm_response_generated(conn: Connection, event: Event):
     payload = event.payload
+    print(f"  -> Projecting LLMResponseGenerated for thread {event.thread_id}, event {event.event_id}")
 
     with conn.cursor() as cur:
         # Timeline
@@ -78,6 +79,19 @@ def handle_checkpoint_created(conn: Connection, event: Event):
                 event.thread_id,
                 payload["ai_message_id"],
                 payload["checkpoint_id"],
+            ),
+        )
+
+        cur.execute(
+            """
+            UPDATE thread_timeline
+            SET checkpoint_id = %s
+            WHERE thread_id = %s AND message_id = %s
+            """,
+            (
+                payload["checkpoint_id"],
+                event.thread_id,
+                payload["ai_message_id"],
             ),
         )
 

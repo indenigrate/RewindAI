@@ -1,18 +1,10 @@
 import os
-import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+import psycopg
 from dotenv import load_dotenv
 
-load_dotenv()
+from app.db.postgres import get_app_db
 
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "port": os.getenv("DB_PORT"),
-    "dbname": os.getenv("DB_NAME"),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "sslmode": os.getenv("DB_SSLMODE", "disable"),
-}
+load_dotenv()
 
 TRUNCATE_SQL = """
 TRUNCATE TABLE 
@@ -27,8 +19,8 @@ RESTART IDENTITY;
 def clear_db():
     conn = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        conn = get_app_db()
+        conn.autocommit = True
         with conn.cursor() as cur:
             print("Clearing all projection tables...")
             cur.execute(TRUNCATE_SQL)

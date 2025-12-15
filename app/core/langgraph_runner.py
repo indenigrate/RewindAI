@@ -35,9 +35,12 @@ def run_langgraph_from_events(
             config=config
         )
 
-        state = graph.get_state(config)
-
-        last_ai_message = state.values["messages"][-1]
+        # After invoke, the result directly contains the final messages
+        last_ai_message = result["messages"][-1]
+        
+        # We need to get the state *after* the invoke to reliably get the checkpoint_id
+        # from the state's config. The invoke result does not contain the config.
+        state = graph.get_state(config) 
         checkpoint_id = state.config["configurable"]["checkpoint_id"]
 
         return {

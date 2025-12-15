@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS thread_timeline (
     content TEXT NOT NULL,
     event_number BIGINT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
+    checkpoint_id UUID,
 
     PRIMARY KEY (thread_id, event_number)
 );
