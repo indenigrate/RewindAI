@@ -86,4 +86,4 @@ Contributions are welcome! Please feel free to open an issue or submit a pull re
 
 ## Maintainers
 
-This project is currently maintained by [Your Name/Organization].
+This project is currently maintained by Devansh Soni (indenigrate).
