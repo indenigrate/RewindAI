@@ -6,6 +6,7 @@ from uuid import UUID
 from datetime import datetime
 import psycopg
 from psycopg.rows import dict_row
+from psycopg.types.json import Json
 
 from uuid import uuid4
 
@@ -23,18 +24,23 @@ class EventStore:
     def __init__(self, conn: psycopg.Connection):
         self.conn = conn
 
-    def _next_event_number(
-        self, thread_id: str, cur: psycopg.Cursor
-    ) -> int:
+    def _next_event_number(self, thread_id: str, cur) -> int:
+        # Per-thread transactional lock
+        cur.execute(
+            "SELECT pg_advisory_xact_lock(hashtext(%s))",
+            (thread_id,),
+        )
+
+        # Safe aggregate AFTER lock
         cur.execute(
             """
             SELECT COALESCE(MAX(event_number), 0) + 1 AS next_event_number
             FROM events
             WHERE thread_id = %s
-            FOR UPDATE
             """,
             (thread_id,),
         )
+
         return cur.fetchone()["next_event_number"]
 
 
@@ -67,7 +73,7 @@ class EventStore:
                         event_type,
                         thread_id,
                         event_number,
-                        payload,
+                        Json(payload),
                     ),
                 )
 
@@ -105,7 +111,7 @@ class EventStore:
                             event_type,
                             thread_id,
                             event_number,
-                            payload,
+                            Json(payload),
                         ),
                     )
 
