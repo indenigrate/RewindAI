@@ -86,7 +86,7 @@ class ProjectionWorker:
     # Main loop
     # --------------------------------------------------
     def run(self):
-        print("📽️ Projection worker started")
+        print("Projection worker started")
 
         while True:
             try:

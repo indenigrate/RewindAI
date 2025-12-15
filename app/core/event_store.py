@@ -150,3 +150,41 @@ class EventStore:
                 (thread_id, event_number),
             )
             return [Event(**row) for row in cur.fetchall()]
+        
+    def load_events_after(
+        self,
+        last_event_id: UUID | None,
+        limit: int = 100,
+    ) -> List[StoredEvent]:
+        """
+        Load events strictly after the given event_id (by insertion order).
+        If last_event_id is None, load from the beginning.
+        """
+
+        with self.conn.cursor() as cur:
+            if last_event_id is None:
+                cur.execute(
+                    """
+                    SELECT *
+                    FROM events
+                    ORDER BY created_at ASC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT *
+                    FROM events
+                    WHERE created_at >
+                        (SELECT created_at FROM events WHERE event_id = %s)
+                    ORDER BY created_at ASC
+                    LIMIT %s
+                    """,
+                    (last_event_id, limit),
+                )
+
+            rows = cur.fetchall()
+
+        return [StoredEvent(**row) for row in rows]
