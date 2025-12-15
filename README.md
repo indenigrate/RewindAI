@@ -1,89 +1,143 @@
-# RewindAI
+# RewindAI: Version-Controlled Conversational AI
 
-RewindAI is a stateful, command-based AI application framework powered by LangGraph and Google Gemini. It provides a foundation for building complex, multi-actor AI systems that can remember and process sequences of commands.
+RewindAI is a cutting-edge system designed to bring version control capabilities to conversational AI. Inspired by Git, it allows for deterministic replay, branching of conversation timelines, resuming from specific checkpoints, and comprehensive history inspection. This project provides both an interactive Command Line Interface (CLI) and a robust API for integrating AI conversations into other applications.
 
-## Key Features
+---
 
-*   **Stateful AI:** Built on LangGraph to enable stateful and complex AI workflows.
-*   **Command-based:** Interact with the AI through a simple command-based interface.
-*   **LLM Powered:** Utilizes Google Gemini for natural language understanding and generation.
-*   **Dual Interfaces:** Accessible through both a REST API and a command-line REPL.
-*   **Persistent State:** Uses a PostgreSQL database to store event history and checkpoints.
-*   **Dockerized:** Comes with a Docker-Compose setup for easy local development.
+## ✨ Why RewindAI is Useful
 
-## Getting Started
+In the rapidly evolving field of AI, reproducibility and traceability are paramount. RewindAI addresses these challenges by offering:
 
-Follow these instructions to get RewindAI up and running on your local machine.
+-   **Deterministic Replay:** Every AI response can be precisely reproduced, enabling thorough debugging and analysis.
+-   **Conversation Branching:** Explore alternative conversational paths by forking a thread from any past AI message.
+-   **Checkpoint-based Resumption:** Easily resume conversations from any saved checkpoint, providing flexibility and robust recovery.
+-   **Transparent History:** Inspect the full history of any conversation, understanding its evolution and the decisions made at each step.
+-   **Interactive & Asynchronous Modes:** Engage with the AI directly via a CLI or integrate it into your services using a powerful API with background workers.
+
+RewindAI transforms AI conversations from ephemeral interactions into auditable, debuggable, and extensible timelines.
+
+---
+
+## 🚀 Getting Started
+
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
 ### Prerequisites
 
-*   Python 3.9+
-*   Docker and Docker Compose
-*   `git`
+*   Python 3.10+
+*   Docker and Docker Compose (for PostgreSQL database)
+*   `pip` (Python package installer)
 
-### Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd rewindai
-    ```
-
-2.  **Create and activate a virtual environment:**
-    ```bash
-    python -m venv my_venv
-    source my_venv/bin/activate
-    ```
-
-3.  **Install the dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **Set up environment variables:**
-    Copy the example `.env` file and fill in your database credentials.
-    ```bash
-    cp .env.example .env
-    ```
-
-5.  **Start the PostgreSQL database:**
-    ```bash
-    docker-compose up -d
-    ```
-
-6.  **Initialize the database:**
-    Run the following scripts to set up the database tables:
-    ```bash
-    python scripts/postgres_init_event_store.py
-    python scripts/postgres_init_langgraph.py
-    ```
-
-## Usage
-
-You can interact with RewindAI through the REST API or the command-line REPL.
-
-### REST API
-
-To run the API server:
+### 1. Clone the repository
 
 ```bash
-uvicorn app.api.main:app --reload
+git clone https://github.com/your-username/rewindai.git
+cd rewindai
 ```
 
-The API will be available at `http://127.0.0.1:8000`. You can find the API documentation at `http://127.0.0.1:8000/docs`.
+### 2. Set up your environment variables
 
-### Command-Line REPL
-
-To use the interactive REPL:
+Copy the example environment file and fill in your details, especially your `GOOGLE_API_KEY` (required for LLM interactions).
 
 ```bash
-python app/main.py
+cp .env.example .env
+# Open .env and add your GOOGLE_API_KEY
 ```
 
-## Contributing
+### 3. Start the PostgreSQL Database
 
-Contributions are welcome! Please feel free to open an issue or submit a pull request.
+RewindAI uses PostgreSQL for its event store and projection tables. Docker Compose provides an easy way to set this up.
 
-## Maintainers
+```bash
+docker-compose up -d postgres
+```
 
-This project is currently maintained by Devansh Soni (indenigrate).
+### 4. Create a Python Virtual Environment and Install Dependencies
+
+It's recommended to use a virtual environment to manage project dependencies.
+
+```bash
+python3 -m venv my_venv
+source my_venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 5. Initialize the Database
+
+The project uses event sourcing, which requires specific tables for the event store and projections. Run the initialization scripts:
+
+```bash
+PYTHONPATH=. ./my_venv/bin/python3 scripts/postgres_init_event_store.py
+PYTHONPATH=. ./my_venv/bin/python3 app/projections/worker.py # This will create projection tables on first run
+```
+
+### 6. Run the Projection Worker
+
+The projection worker consumes events and builds the read models used by the API. This should run continuously in the background.
+
+```bash
+PYTHONPATH=. ./my_venv/bin/python3 app/projections/worker.py &
+```
+
+### 7. Run the API Server
+
+The FastAPI server exposes the command and read endpoints.
+
+```bash
+PYTHONPATH=. ./my_venv/bin/uvicorn app.api.main:app --host 0.0.0.0 --port 8000 &
+```
+The API documentation is available at `http://localhost:8000/docs`.
+
+### 8. Use the CLI (REPL)
+
+Engage with the AI directly via the interactive CLI.
+
+```bash
+PYTHONPATH=. ./my_venv/bin/python3 app/cli/repl.py
+```
+
+---
+
+## 📖 Usage Examples
+
+### CLI Interaction
+
+Once the CLI is running, you can create new threads, send messages, inspect history, and fork conversations interactively.
+
+```
+(REWIND_AI) > new thread
+# ... AI output ...
+(REWIND_AI) > send "Hello there!"
+# ... AI output ...
+(REWIND_AI) > fork from 1
+# ... AI creates a new branch ...
+```
+
+### API Interaction
+
+The API provides programmatic access to all core functionalities. Detailed API documentation, including request/response schemas and `curl` examples, is available in [API.md](API.md).
+
+---
+
+## 🤝 Contribution
+
+We welcome contributions! If you're interested in improving RewindAI, please refer to our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on setting up your development environment, submitting pull requests, and coding standards.
+
+---
+
+## ❓ Getting Help
+
+If you encounter any issues or have questions, please check:
+
+*   The [API Documentation](API.md) for endpoint details.
+*   Existing [GitHub Issues](https://github.com/your-username/rewindai/issues) for similar problems.
+*   Open a new [GitHub Issue](https://github.com/your-username/rewindai/issues/new) if you can't find a solution.
+
+---
+
+## 🧑‍💻 Maintainers
+
+*   **[Devansh]** - Initial development and core maintenance.
+    *   GitHub: [\@indenigrate](https://github.com/indenigrate)
+
+---
