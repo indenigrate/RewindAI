@@ -13,3 +13,6 @@ psycopg[binary]>=3.1.18
 
 # Environment variables
 python-dotenv>=1.0.1
+
+uvicorn
+fastapi
