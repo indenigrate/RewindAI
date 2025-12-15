@@ -26,3 +26,10 @@ CREATE TABLE IF NOT EXISTS thread_heads (
     event_number BIGINT NOT NULL
 );
 """
+
+PROJECTION_OFFSET_SQL = """
+CREATE TABLE IF NOT EXISTS projection_offsets (
+    projection_name TEXT PRIMARY KEY,
+    last_event_number BIGINT NOT NULL
+);
+"""
