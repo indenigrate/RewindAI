@@ -30,6 +30,6 @@ CREATE TABLE IF NOT EXISTS thread_heads (
 PROJECTION_OFFSET_SQL = """
 CREATE TABLE IF NOT EXISTS projection_offsets (
     projection_name TEXT PRIMARY KEY,
-    last_event_number BIGINT NOT NULL
+    last_event_id UUID NOT NULL
 );
 """
