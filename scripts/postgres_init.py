@@ -1,6 +1,5 @@
 import os
-import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+import psycopg
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -64,15 +63,20 @@ ON ai_message_checkpoints (parent_thread_id, parent_ai_message_id);
 """
 
 def init_db():
-    conn = psycopg2.connect(**DB_CONFIG)
-    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-
     try:
+        # Connect using psycopg v3 with autocommit enabled
+        conn = psycopg.connect(autocommit=True, **DB_CONFIG)
+        
         with conn.cursor() as cur:
             cur.execute(INIT_SQL)
             print("✅ ai_message_checkpoints schema initialized / updated successfully")
-    finally:
+            
         conn.close()
+    except psycopg.OperationalError as e:
+        print(f"❌ Database connection failed: {e}")
+        print("💡 Tip: Ensure your Docker database container is running (docker compose up -d)")
+    except Exception as e:
+        print(f"❌ An error occurred: {e}")
 
 if __name__ == "__main__":
     init_db()
