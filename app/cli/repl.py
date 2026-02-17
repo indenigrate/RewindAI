@@ -58,6 +58,8 @@ def repl():
             state = graph.get_state(config)
             checkpoint_id = state.config["configurable"]["checkpoint_id"]
             last_ai = state.values["messages"][-1]
+            
+            print(f"[Checkpoint: {checkpoint_id}]")
 
             turn_index = get_next_turn_index(app_db, active_thread)
 
